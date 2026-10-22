@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Championship Odds Calculator</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  :root {
+    --bg: #07090f;
+    --bg2: #0d1220;
+    --bg3: #131929;
+    --border: rgba(255,255,255,.08);
+    --t1: #f0f4ff;
+    --t2: #9aa5be;
+    --t3: #5a6580;
+    --gold: #ffb300;
+    --gold2: #ffe08a;
+    --green: #22c55e;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --purple: #a855f7;
+    --radius: 12px;
+    --card-shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 18px rgba(0,0,0,.25);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--t1); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; }
+
+  /* ── layout ── */
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ── connect screen ── */
+  #s-con {
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(255,179,0,.07) 0%, transparent 70%), var(--bg);
+  }
+  .con-box {
+    width: 100%; max-width: 460px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 40px 36px 36px;
+    box-shadow: var(--card-shadow);
+  }
+  .con-logo {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, var(--gold), #ff8800);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; margin: 0 auto 20px;
+    box-shadow: 0 4px 20px rgba(255,179,0,.3);
+  }
+  .con-title { text-align: center; font-size: 22px; font-weight: 700; color: var(--t1); margin-bottom: 6px; }
+  .con-sub { text-align: center; font-size: 13px; color: var(--t2); margin-bottom: 32px; line-height: 1.5; }
+  .field-label { font-size: 11px; font-weight: 600; color: var(--t3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .inp {
+    width: 100%;
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--t1); font-size: 14px; padding: 10px 12px;
+    outline: none; transition: border-color .15s;
+  }
+  .inp:focus { border-color: var(--gold); }
+  .inp::placeholder { color: var(--t3); }
+  .btn-primary {
+    width: 100%; padding: 11px; margin-top: 20px;
+    background: var(--gold); color: #000; font-weight: 700; font-size: 14px;
+    border: none; border-radius: 8px; cursor: pointer;
+    transition: opacity .15s, transform .1s;
+  }
+  .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: .45; cursor: default; transform: none; }
+  .saved-note { font-size: 12px; color: var(--t3); margin-top: 8px; text-align: center; }
+  .err-msg { font-size: 12px; color: var(--red); margin-top: 10px; text-align: center; }
+
+  /* ── league select screen ── */
+  #s-lea { align-items: center; justify-content: center; padding: 24px; }
+  .lea-box { width: 100%; max-width: 520px; }
+  .back-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: none; border: none; color: var(--t2); cursor: pointer;
+    font-size: 13px; margin-bottom: 20px; padding: 0;
+  }
+  .back-btn:hover { color: var(--t1); }
+  .lea-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .lea-sub { font-size: 13px; color: var(--t2); margin-bottom: 20px; }
+  .lea-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; }
+  .lea-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; cursor: pointer; transition: border-color .15s, transform .1s;
+  }
+  .lea-item:hover { border-color: var(--gold); transform: translateX(2px); }
+  .lea-item-name { font-weight: 600; font-size: 14px; }
+  .lea-item-meta { font-size: 12px; color: var(--t2); margin-top: 2px; }
+  .lea-item-arrow { color: var(--t3); font-size: 16px; }
+
+  /* ── run/loading screen ── */
+  #s-run { align-items: center; justify-content: center; padding: 24px; }
+  .run-box { width: 100%; max-width: 460px; text-align: center; }
+  .run-icon {
+    width: 64px; height: 64px;
+    background: linear-gradient(135deg, var(--gold), #ff8800);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin: 0 auto 24px;
+    box-shadow: 0 4px 24px rgba(255,179,0,.25);
+    animation: pulse-gold 2s ease-in-out infinite;
+  }
+  @keyframes pulse-gold {
+    0%, 100% { box-shadow: 0 4px 24px rgba(255,179,0,.25); }
+    50% { box-shadow: 0 4px 40px rgba(255,179,0,.5); }
+  }
+  .run-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .run-status { font-size: 13px; color: var(--t2); margin-bottom: 28px; min-height: 18px; }
+  .progress-track {
+    height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin-bottom: 8px;
+  }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--gold), #ff8800);
+    border-radius: 3px; transition: width .3s ease; width: 0%;
+  }
+  .progress-label { font-size: 11px; color: var(--t3); }
+
+  /* ── results screen ── */
+  #s-res { padding: 0; flex-direction: column; }
+  .res-header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .res-header-left { display: flex; align-items: center; gap: 12px; }
+  .res-logo-sm {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--gold), #ff8800);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 15px;
+    flex-shrink: 0;
+  }
+  .res-league-name { font-weight: 700; font-size: 15px; }
+  .res-season { font-size: 12px; color: var(--t2); }
+  .btn-new {
+    background: none; border: 1px solid var(--border); border-radius: 8px;
+    color: var(--t2); font-size: 12px; padding: 6px 12px; cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .btn-new:hover { border-color: var(--gold); color: var(--t1); }
+  .res-body { padding: 20px; max-width: 900px; margin: 0 auto; width: 100%; }
+
+  /* verdict banner */
+  .verdict-banner {
+    border-radius: var(--radius); padding: 28px 24px; margin-bottom: 20px;
+    display: flex; align-items: flex-start; gap: 16px;
+    background: var(--bg2); border: 1px solid var(--border);
+    box-shadow: var(--card-shadow);
+  }
+  .verdict-icon { font-size: 36px; flex-shrink: 0; margin-top: 2px; }
+  .verdict-champ-name { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .verdict-tag {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 10px;
+  }
+  .verdict-desc { font-size: 13px; color: var(--t2); line-height: 1.6; }
+
+  /* stat cards row */
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  @media (max-width: 600px) { .stat-row { grid-template-columns: 1fr; } }
+  .stat-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px; box-shadow: var(--card-shadow);
+  }
+  .stat-card-label { font-size: 11px; font-weight: 600; color: var(--t3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+  .stat-card-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .stat-card-val { font-size: 13px; color: var(--t2); }
+  .stat-card-pct { font-size: 24px; font-weight: 800; }
+
+  /* section cards */
+  .section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; box-shadow: var(--card-shadow); overflow: hidden; }
+  .section-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+  .section-head i { color: var(--gold); font-size: 16px; }
+  .section-body { padding: 4px 0; }
+
+  /* table rows */
+  .trow {
+    display: grid;
+    align-items: center;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+  }
+  .trow:last-child { border-bottom: none; }
+  .trow:hover { background: rgba(255,255,255,.03); }
+  .trow-rank { font-size: 12px; color: var(--t3); font-weight: 600; width: 24px; }
+  .trow-name { font-weight: 600; font-size: 13px; }
+  .trow-sub { font-size: 11px; color: var(--t2); margin-top: 1px; }
+  .trow-pct { font-weight: 700; font-size: 14px; text-align: right; }
+  .trow-bar-wrap { height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-top: 6px; }
+  .trow-bar { height: 100%; border-radius: 2px; transition: width .4s ease; }
+
+  /* champion row highlight */
+  .trow.is-champ { background: rgba(255,179,0,.06); }
+  .trow.is-champ .trow-name { color: var(--gold); }
+
+  /* luck badge */
+  .luck-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  }
+  .luck-pos { background: rgba(34,197,94,.15); color: var(--green); }
+  .luck-neg { background: rgba(239,68,68,.15); color: var(--red); }
+  .luck-neu { background: rgba(90,101,128,.2); color: var(--t2); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+
+  /* spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin .8s linear infinite; display: inline-block; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════ CONNECT SCREEN ═══════════════════════ -->
+<div id="s-con" class="screen active">
+  <div class="con-box">
+    <div class="con-logo"><i class="ti ti-trophy" style="color:#000"></i></div>
+    <div class="con-title">Championship Odds</div>
+    <div class="con-sub">Run a Monte Carlo simulation on your Sleeper league history to find out how lucky — or dominant — your champion really was.</div>
+    <div class="field-label">Sleeper Username</div>
+    <input id="iUser" class="inp" type="text" placeholder="your_sleeper_username" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <div id="savedNote" class="saved-note hidden"><i class="ti ti-check" style="font-size:11px;margin-right:3px;color:var(--green)"></i>Last username pre-filled</div>
+    <button id="bCon" class="btn-primary" onclick="doConnect()"><i class="ti ti-arrow-right" style="margin-right:6px"></i>Find Leagues</button>
+    <div id="conErr" class="err-msg hidden"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ LEAGUE SELECT SCREEN ═══════════════════════ -->
+<div id="s-lea" class="screen">
+  <div class="lea-box">
+    <button class="back-btn" onclick="goBack('s-con')"><i class="ti ti-arrow-left"></i> Back</button>
+    <div class="lea-title">Select a League</div>
+    <div id="leaSub" class="lea-sub"></div>
+    <div id="leaList" class="lea-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ RUNNING SCREEN ═══════════════════════ -->
+<div id="s-run" class="screen">
+  <div class="run-box">
+    <div class="run-icon"><i class="ti ti-refresh" style="color:#000" id="runIcon"></i></div>
+    <div class="run-title">Running Simulation</div>
+    <div id="runStatus" class="run-status">Fetching league data...</div>
+    <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+    <div id="progressLabel" class="progress-label">0 / 5,000 simulations</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ RESULTS SCREEN ═══════════════════════ -->
+<div id="s-res" class="screen">
+  <div class="res-header">
+    <div class="res-header-left">
+      <div class="res-logo-sm"><i class="ti ti-trophy" style="color:#000"></i></div>
+      <div>
+        <div id="resLeagueName" class="res-league-name"></div>
+        <div id="resSeason" class="res-season"></div>
+      </div>
+    </div>
+    <button class="btn-new" onclick="goBack('s-lea')"><i class="ti ti-switch-2" style="margin-right:4px;font-size:11px"></i>Switch League</button>
+  </div>
+  <div class="res-body">
+
+    <!-- verdict banner -->
+    <div id="verdictBanner" class="verdict-banner"></div>
+
+    <!-- stat cards -->
+    <div class="stat-row" id="statRow"></div>
+
+    <!-- championship odds leaderboard -->
+    <div class="section">
+      <div class="section-head"><i class="ti ti-trophy"></i> Championship Odds</div>
+      <div class="section-body" id="oddsBody"></div>
+    </div>
+
+    <!-- true standings -->
+    <div class="section">
+      <div class="section-head"><i class="ti ti-list-numbers"></i> True Standings <span style="font-size:11px;font-weight:400;color:var(--t3);margin-left:6px">(by total points scored)</span></div>
+      <div class="section-body" id="trueBody"></div>
+    </div>
+
+    <!-- schedule strength -->
+    <div class="section">
+      <div class="section-head"><i class="ti ti-chart-bar"></i> Schedule Strength <span style="font-size:11px;font-weight:400;color:var(--t3);margin-left:6px">(avg opponent PPG faced)</span></div>
+      <div class="section-body" id="schedBody"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── state ─────────────────────────────────────────────────────────────────
+var S = {
+  username: '',
+  userId: '',
+  leagues: [],
+  selectedLeague: null,
+  simResults: null
+};
+
+var SIMS = 5000;
+
+// ─── navigation ────────────────────────────────────────────────────────────
+function show(id) {
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+}
+function goBack(id) { show(id); }
+
+// ─── localStorage ──────────────────────────────────────────────────────────
+(function() {
+  try {
+    var saved = localStorage.getItem('champs_user');
+    if (saved) {
+      document.getElementById('iUser').value = saved;
+      document.getElementById('savedNote').classList.remove('hidden');
+    }
+  } catch(e) {}
+})();
+
+// ─── connect ───────────────────────────────────────────────────────────────
+async function doConnect() {
+  var btn = document.getElementById('bCon');
+  var err = document.getElementById('conErr');
+  var username = document.getElementById('iUser').value.trim();
+  if (!username) { showErr(err, 'Please enter a Sleeper username.'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader spin" style="margin-right:6px"></i>Looking up...';
+  err.classList.add('hidden');
+
+  try {
+    var res = await fetch('https://api.sleeper.app/v1/user/' + encodeURIComponent(username));
+    if (!res.ok) throw new Error('User not found');
+    var user = await res.json();
+    if (!user || !user.user_id) throw new Error('User not found');
+
+    S.username = username;
+    S.userId = user.user_id;
+
+    try { localStorage.setItem('champs_user', username); } catch(e) {}
+
+    // fetch leagues — try multiple seasons back to find ones with completed playoffs
+    var year = new Date().getFullYear();
+    var allLeagues = [];
+    var fetchYears = [year - 1, year - 2, year - 3, year];
+    var fetches = fetchYears.map(function(y) {
+      return fetch('https://api.sleeper.app/v1/user/' + S.userId + '/leagues/nfl/' + y)
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .catch(function() { return []; });
+    });
+    var results = await Promise.all(fetches);
+    for (var i = 0; i < results.length; i++) {
+      if (Array.isArray(results[i])) {
+        results[i].forEach(function(l) {
+          l._year = fetchYears[i];
+          allLeagues.push(l);
+        });
+      }
+    }
+
+    // dedupe by league_id, prefer most recent year entry
+    var seen = {};
+    var deduped = [];
+    allLeagues.forEach(function(l) {
+      if (!seen[l.league_id] || l._year > seen[l.league_id]._year) seen[l.league_id] = l;
+    });
+    Object.values(seen).forEach(function(l) { deduped.push(l); });
+    deduped.sort(function(a, b) { return b._year - a._year; });
+
+    if (!deduped.length) throw new Error('No leagues found for this user.');
+
+    S.leagues = deduped;
+    renderLeagueSelect();
+    show('s-lea');
+
+  } catch(e) {
+    showErr(err, e.message || 'Could not find user. Check the username and try again.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-arrow-right" style="margin-right:6px"></i>Find Leagues';
+  }
+}
+
+function showErr(el, msg) {
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+// ─── league select ──────────────────────────────────────────────────────────
+function renderLeagueSelect() {
+  document.getElementById('leaSub').textContent = 'Found ' + S.leagues.length + ' leagues for ' + S.username;
+  var list = document.getElementById('leaList');
+  list.innerHTML = '';
+  S.leagues.forEach(function(l) {
+    var div = document.createElement('div');
+    div.className = 'lea-item';
+    var size = l.total_rosters || '?';
+    var sport = l.sport || 'nfl';
+    div.innerHTML = '<div>' +
+      '<div class="lea-item-name">' + esc(l.name || 'Unnamed League') + '</div>' +
+      '<div class="lea-item-meta">' + l._year + ' season &nbsp;·&nbsp; ' + size + ' teams &nbsp;·&nbsp; ' + sport.toUpperCase() + '</div>' +
+    '</div>' +
+    '<i class="ti ti-chevron-right lea-item-arrow"></i>';
+    div.onclick = function() { startAnalysis(l); };
+    list.appendChild(div);
+  });
+}
+
+// ─── analysis pipeline ─────────────────────────────────────────────────────
+async function startAnalysis(league) {
+  S.selectedLeague = league;
+  show('s-run');
+  setStatus('Fetching roster data...', 2);
+
+  try {
+    var leagueId = league.league_id;
+
+    // 1. rosters + users
+    var [rosters, users] = await Promise.all([
+      apiFetch('/v1/league/' + leagueId + '/rosters'),
+      apiFetch('/v1/league/' + leagueId + '/users')
+    ]);
+
+    setStatus('Fetching matchup history...', 8);
+
+    // figure out how many weeks were played (regular season + playoffs)
+    var totalWeeks = league.settings && league.settings.playoff_week_start
+      ? (league.settings.playoff_week_start - 1 + (league.settings.playoff_round_type === 2 ? 4 : 3))
+      : 17;
+    totalWeeks = Math.min(totalWeeks, 18);
+
+    var weekFetches = [];
+    for (var w = 1; w <= totalWeeks; w++) {
+      weekFetches.push(apiFetch('/v1/league/' + leagueId + '/matchups/' + w).catch(function() { return []; }));
+    }
+    var allMatchups = await Promise.all(weekFetches);
+
+    setStatus('Building team profiles...', 18);
+
+    // 2. build team map: roster_id → {name, owner_id, wins, losses, points}
+    var userMap = {};
+    users.forEach(function(u) { userMap[u.user_id] = u.display_name || u.username || 'Team'; });
+
+    var teams = {};
+    rosters.forEach(function(r) {
+      teams[r.roster_id] = {
+        rid: r.roster_id,
+        name: userMap[r.owner_id] || ('Team ' + r.roster_id),
+        owner_id: r.owner_id,
+        wins: (r.settings && r.settings.wins) || 0,
+        losses: (r.settings && r.settings.losses) || 0,
+        fpts: (r.settings && r.settings.fpts) || 0,
+        fpts_decimal: (r.settings && r.settings.fpts_decimal) || 0,
+        is_champ: r.settings && r.settings.rank === 1
+      };
+      teams[r.roster_id].totalPts = teams[r.roster_id].fpts + teams[r.roster_id].fpts_decimal / 100;
+    });
+
+    // 3. build week-by-week scores from matchup data
+    // weeklyScores[rid][week] = points scored that week
+    var playoffStart = (league.settings && league.settings.playoff_week_start) || 15;
+    var regSeasonWeeks = playoffStart - 1;
+
+    var weeklyScores = {};
+    var actualSchedule = {}; // actualSchedule[rid] = [opponent_rid, ...]
+    Object.keys(teams).forEach(function(rid) {
+      weeklyScores[rid] = {};
+      actualSchedule[rid] = [];
+    });
+
+    for (var wi = 0; wi < allMatchups.length; wi++) {
+      var week = wi + 1;
+      if (week > regSeasonWeeks) break; // only regular season for schedule sim
+      var weekData = allMatchups[wi];
+      if (!Array.isArray(weekData) || !weekData.length) continue;
+
+      // group by matchup_id
+      var matchupGroups = {};
+      weekData.forEach(function(m) {
+        if (!m.matchup_id) return;
+        if (!matchupGroups[m.matchup_id]) matchupGroups[m.matchup_id] = [];
+        matchupGroups[m.matchup_id].push(m);
+      });
+
+      Object.values(matchupGroups).forEach(function(pair) {
+        if (pair.length !== 2) return;
+        var a = pair[0], b = pair[1];
+        if (teams[a.roster_id]) weeklyScores[a.roster_id][week] = a.points || 0;
+        if (teams[b.roster_id]) weeklyScores[b.roster_id][week] = b.points || 0;
+        if (teams[a.roster_id] && teams[b.roster_id]) {
+          actualSchedule[a.roster_id].push(b.roster_id);
+          actualSchedule[b.roster_id].push(a.roster_id);
+        }
+      });
+    }
+
+    setStatus('Computing schedule strength...', 25);
+
+    // schedule strength: avg opponent points per game faced
+    var schedStrength = {};
+    Object.keys(teams).forEach(function(rid) {
+      var opp = actualSchedule[rid];
+      if (!opp.length) { schedStrength[rid] = 0; return; }
+      var total = 0, cnt = 0;
+      opp.forEach(function(oppRid, idx) {
+        var week = idx + 1;
+        var pts = weeklyScores[oppRid] && weeklyScores[oppRid][week] !== undefined
+          ? weeklyScores[oppRid][week] : teams[oppRid] ? teams[oppRid].totalPts / regSeasonWeeks : 0;
+        total += pts; cnt++;
+      });
+      schedStrength[rid] = cnt ? total / cnt : 0;
+    });
+
+    setStatus('Running Monte Carlo (0 / ' + SIMS + ')...', 30);
+
+    // 4. run Monte Carlo
+    var rids = Object.keys(teams).map(Number);
+    var simChampCounts = {};
+    rids.forEach(function(r) { simChampCounts[r] = 0; });
+
+    // team avg PPG for playoff simulation
+    var avgPPG = {};
+    rids.forEach(function(r) {
+      var scores = Object.values(weeklyScores[r]);
+      avgPPG[r] = scores.length ? scores.reduce(function(a, b) { return a + b; }, 0) / scores.length : teams[r].totalPts / regSeasonWeeks || 100;
+    });
+
+    await runMonteCarloAsync(rids, weeklyScores, regSeasonWeeks, avgPPG, league, simChampCounts, function(done) {
+      var pct = 30 + Math.round((done / SIMS) * 60);
+      setProgress(pct);
+      document.getElementById('runStatus').textContent = 'Running Monte Carlo (' + done.toLocaleString() + ' / ' + SIMS.toLocaleString() + ')...';
+      document.getElementById('progressLabel').textContent = done.toLocaleString() + ' / ' + SIMS.toLocaleString() + ' simulations';
+    });
+
+    setStatus('Building results...', 95);
+
+    // 5. find actual champion
+    var actualChampRid = null;
+    Object.keys(teams).forEach(function(rid) {
+      if (teams[rid].is_champ) actualChampRid = parseInt(rid);
+    });
+    // fallback: top by wins then points
+    if (!actualChampRid) {
+      var sorted = rids.slice().sort(function(a, b) {
+        var wa = teams[a].wins, wb = teams[b].wins;
+        if (wb !== wa) return wb - wa;
+        return teams[b].totalPts - teams[a].totalPts;
+      });
+      actualChampRid = sorted[0];
+    }
+
+    // 6. compile results
+    var champOdds = {};
+    rids.forEach(function(r) { champOdds[r] = simChampCounts[r] / SIMS; });
+
+    S.simResults = {
+      teams: teams, champOdds: champOdds, schedStrength: schedStrength,
+      actualChampRid: actualChampRid, regSeasonWeeks: regSeasonWeeks,
+      weeklyScores: weeklyScores, rids: rids, avgPPG: avgPPG
+    };
+
+    setProgress(100);
+    setStatus('Done!', 100);
+
+    await sleep(400);
+    renderResults();
+    show('s-res');
+
+  } catch(e) {
+    console.error(e);
+    setStatus('Error: ' + (e.message || 'Something went wrong.'), 0);
+  }
+}
+
+// ─── Monte Carlo ────────────────────────────────────────────────────────────
+async function runMonteCarloAsync(rids, weeklyScores, regSeasonWeeks, avgPPG, league, simChampCounts, onProgress) {
+  var BATCH = 250;
+  var done = 0;
+
+  // get team PPG arrays for random draw
+  var ppgArrays = {};
+  rids.forEach(function(r) {
+    ppgArrays[r] = Object.values(weeklyScores[r]).filter(function(v) { return v > 0; });
+    if (!ppgArrays[r].length) ppgArrays[r] = [avgPPG[r]];
+  });
+
+  var playoffStart = (league.settings && league.settings.playoff_week_start) || 15;
+  var playoffTeams = (league.settings && league.settings.playoff_teams) || 6;
+
+  function runBatch(n) {
+    for (var s = 0; s < n; s++) {
+      // random schedule: shuffle opponents for each week
+      var simWins = {};
+      var simPts = {};
+      rids.forEach(function(r) { simWins[r] = 0; simPts[r] = 0; });
+
+      for (var w = 1; w <= regSeasonWeeks; w++) {
+        // randomly pair teams
+        var shuffled = rids.slice();
+        for (var i = shuffled.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var tmp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = tmp;
+        }
+        // scores this week: use actual week scores if available, else draw from team's history
+        var weekScores = {};
+        rids.forEach(function(r) {
+          var actual = weeklyScores[r][w];
+          if (actual !== undefined && actual > 0) {
+            weekScores[r] = actual;
+          } else {
+            // draw random week from team history
+            var arr = ppgArrays[r];
+            weekScores[r] = arr[Math.floor(Math.random() * arr.length)];
+          }
+          simPts[r] += weekScores[r];
+        });
+        for (var p = 0; p < shuffled.length - 1; p += 2) {
+          var ta = shuffled[p], tb = shuffled[p + 1];
+          if (weekScores[ta] > weekScores[tb]) simWins[ta]++;
+          else simWins[tb]++;
+        }
+      }
+
+      // sort into playoff seeds by wins then total pts
+      var seeded = rids.slice().sort(function(a, b) {
+        if (simWins[b] !== simWins[a]) return simWins[b] - simWins[a];
+        return simPts[b] - simPts[a];
+      });
+
+      var champ = simulatePlayoffs(seeded, playoffTeams, avgPPG);
+      if (champ !== null) simChampCounts[champ] = (simChampCounts[champ] || 0) + 1;
+    }
+  }
+
+  while (done < SIMS) {
+    var batch = Math.min(BATCH, SIMS - done);
+    runBatch(batch);
+    done += batch;
+    onProgress(done);
+    if (done < SIMS) await sleep(0);
+  }
+}
+
+function simulatePlayoffs(seeded, playoffTeams, avgPPG) {
+  // seeded[0] is best seed, etc.
+  var n = Math.min(playoffTeams, seeded.length);
+  if (n <= 0) return null;
+
+  function probWin(a, b) {
+    var pa = avgPPG[a] || 100, pb = avgPPG[b] || 100;
+    return pa / (pa + pb);
+  }
+  function game(a, b) {
+    return Math.random() < probWin(a, b) ? a : b;
+  }
+
+  if (n === 6) {
+    // wildcard: 3v6, 4v5 → winners join 1,2 in semis
+    var wc1 = game(seeded[2], seeded[5]);
+    var wc2 = game(seeded[3], seeded[4]);
+    var sf1 = game(seeded[0], wc2);
+    var sf2 = game(seeded[1], wc1);
+    return game(sf1, sf2);
+  } else if (n === 4) {
+    var sf1 = game(seeded[0], seeded[3]);
+    var sf2 = game(seeded[1], seeded[2]);
+    return game(sf1, sf2);
+  } else if (n === 8) {
+    var q1 = game(seeded[0], seeded[7]);
+    var q2 = game(seeded[3], seeded[4]);
+    var q3 = game(seeded[1], seeded[6]);
+    var q4 = game(seeded[2], seeded[5]);
+    var s1 = game(q1, q2);
+    var s2 = game(q3, q4);
+    return game(s1, s2);
+  } else {
+    // generic: keep halving
+    var bracket = seeded.slice(0, n);
+    while (bracket.length > 1) {
+      var next = [];
+      for (var i = 0; i < bracket.length - 1; i += 2) next.push(game(bracket[i], bracket[i + 1]));
+      if (bracket.length % 2 === 1) next.push(bracket[bracket.length - 1]);
+      bracket = next;
+    }
+    return bracket[0];
+  }
+}
+
+// ─── render results ──────────────────────────────────────────────────────────
+function renderResults() {
+  var R = S.simResults;
+  var league = S.selectedLeague;
+  var teams = R.teams, rids = R.rids;
+  var champ = R.actualChampRid;
+  var champOdds = R.champOdds[champ] || 0;
+
+  document.getElementById('resLeagueName').textContent = league.name || 'League';
+  document.getElementById('resSeason').textContent = (league._year || '') + ' season · Monte Carlo simulation (' + SIMS.toLocaleString() + ' runs)';
+
+  // ── verdict banner
+  var verdict, verdictColor, verdictDesc, icon;
+  if (champOdds >= 0.40) {
+    verdict = 'DOMINANT'; verdictColor = var_gold;
+    icon = 'ti-crown';
+    verdictDesc = pct(champOdds) + ' of simulated seasons ended with ' + teams[champ].name + ' winning the championship. This was not luck — this team was the clear best team in the league.';
+  } else if (champOdds >= 0.15) {
+    verdict = 'WELL-EARNED'; verdictColor = var_green;
+    icon = 'ti-medal';
+    verdictDesc = pct(champOdds) + ' of simulated seasons ended with ' + teams[champ].name + ' winning. A solid, well-deserved championship with real skill backing it up.';
+  } else if (champOdds >= 0.05) {
+    verdict = 'LUCKY'; verdictColor = '#f97316';
+    icon = 'ti-clover';
+    verdictDesc = 'Only ' + pct(champOdds) + ' of simulated seasons ended with ' + teams[champ].name + ' winning. A legitimate champion, but the schedule and bracket bounced their way.';
+  } else {
+    verdict = 'MAJOR UPSET'; verdictColor = var_red;
+    icon = 'ti-horse';
+    verdictDesc = 'Only ' + pct(champOdds) + ' of simulated seasons ended with ' + teams[champ].name + ' winning. One of the most unlikely championship results the simulation has ever seen.';
+  }
+
+  // most robbed: highest sim odds who didn't win
+  var mostRobbed = null, mostRobbedOdds = 0;
+  rids.forEach(function(r) {
+    if (r !== champ && R.champOdds[r] > mostRobbedOdds) {
+      mostRobbedOdds = R.champOdds[r];
+      mostRobbed = r;
+    }
+  });
+
+  // luckiest: best wins relative to scoring rank
+  var trueSorted = rids.slice().sort(function(a, b) { return teams[b].totalPts - teams[a].totalPts; });
+  var trueRank = {};
+  trueSorted.forEach(function(r, i) { trueRank[r] = i + 1; });
+  var recordSorted = rids.slice().sort(function(a, b) {
+    if (teams[b].wins !== teams[a].wins) return teams[b].wins - teams[a].wins;
+    return teams[b].totalPts - teams[a].totalPts;
+  });
+  var recordRank = {};
+  recordSorted.forEach(function(r, i) { recordRank[r] = i + 1; });
+  var luckiest = null, maxLuck = -99;
+  rids.forEach(function(r) {
+    var luck = trueRank[r] - recordRank[r]; // positive = ranked worse in true standings than record standings
+    if (luck > maxLuck) { maxLuck = luck; luckiest = r; }
+  });
+
+  var bannerEl = document.getElementById('verdictBanner');
+  bannerEl.style.borderColor = verdictColor + '55';
+  bannerEl.style.background = 'linear-gradient(135deg, ' + verdictColor + '0d, var(--bg2))';
+  bannerEl.innerHTML =
+    '<div class="verdict-icon"><i class="ti ' + icon + '" style="color:' + verdictColor + '"></i></div>' +
+    '<div>' +
+      '<div class="verdict-champ-name" style="color:' + verdictColor + '">' + esc(teams[champ].name) + '</div>' +
+      '<div><span class="verdict-tag" style="background:' + verdictColor + '22;color:' + verdictColor + '">' + verdict + '</span></div>' +
+      '<div class="verdict-desc">' + verdictDesc + '</div>' +
+    '</div>';
+
+  // ── stat cards
+  var statRow = document.getElementById('statRow');
+  statRow.innerHTML =
+    makeStatCard('Champion', teams[champ].name, pct(champOdds) + ' sim odds', verdictColor) +
+    (mostRobbed ? makeStatCard('Most Robbed', teams[mostRobbed].name, pct(mostRobbedOdds) + ' should-have-won odds', var_red) : '') +
+    (luckiest ? makeStatCard('Luckiest Schedule', teams[luckiest].name, 'True rank #' + trueRank[luckiest] + ' · Record rank #' + recordRank[luckiest], '#a855f7') : '');
+
+  // ── championship odds leaderboard
+  var oddsBody = document.getElementById('oddsBody');
+  var oddsSorted = rids.slice().sort(function(a, b) { return R.champOdds[b] - R.champOdds[a]; });
+  var maxOdds = R.champOdds[oddsSorted[0]] || 0.01;
+  oddsBody.innerHTML = '';
+  oddsSorted.forEach(function(r, i) {
+    var odds = R.champOdds[r];
+    var isChamp = r === champ;
+    var barColor = isChamp ? var_gold : (odds >= 0.15 ? var_green : (odds >= 0.05 ? '#f97316' : var_blue));
+    var row = document.createElement('div');
+    row.className = 'trow' + (isChamp ? ' is-champ' : '');
+    row.style.gridTemplateColumns = '28px 1fr 80px';
+    row.innerHTML =
+      '<span class="trow-rank">' + (i + 1) + '</span>' +
+      '<div>' +
+        '<div class="trow-name">' + esc(teams[r].name) + (isChamp ? ' <i class="ti ti-crown" style="color:var(--gold);font-size:11px;margin-left:4px"></i>' : '') + '</div>' +
+        '<div class="trow-bar-wrap"><div class="trow-bar" style="width:' + Math.round((odds / maxOdds) * 100) + '%;background:' + barColor + '"></div></div>' +
+      '</div>' +
+      '<span class="trow-pct" style="color:' + barColor + '">' + pct(odds) + '</span>';
+    oddsBody.appendChild(row);
+  });
+
+  // ── true standings
+  var trueBody = document.getElementById('trueBody');
+  trueBody.innerHTML = '';
+  var maxPts = teams[trueSorted[0]].totalPts || 1;
+  trueSorted.forEach(function(r, i) {
+    var isChamp = r === champ;
+    var luckDiff = trueRank[r] - recordRank[r];
+    var luckLabel = luckDiff > 2 ? 'lucky' : (luckDiff < -2 ? 'unlucky' : 'fair');
+    var badgeCls = luckDiff > 2 ? 'luck-pos' : (luckDiff < -2 ? 'luck-neg' : 'luck-neu');
+    var row = document.createElement('div');
+    row.className = 'trow' + (isChamp ? ' is-champ' : '');
+    row.style.gridTemplateColumns = '28px 1fr auto 80px';
+    row.innerHTML =
+      '<span class="trow-rank">' + (i + 1) + '</span>' +
+      '<div>' +
+        '<div class="trow-name">' + esc(teams[r].name) + (isChamp ? ' <i class="ti ti-crown" style="color:var(--gold);font-size:11px;margin-left:4px"></i>' : '') + '</div>' +
+        '<div class="trow-sub">' + teams[r].wins + 'W · ' + pts(teams[r].totalPts) + ' pts · Record rank #' + recordRank[r] + '</div>' +
+        '<div class="trow-bar-wrap"><div class="trow-bar" style="width:' + Math.round((teams[r].totalPts / maxPts) * 100) + '%;background:var(--blue)"></div></div>' +
+      '</div>' +
+      '<span class="luck-badge ' + badgeCls + '" style="margin-right:12px;align-self:center">' + luckLabel + '</span>' +
+      '<span class="trow-pct" style="color:var(--t2)">' + pts(teams[r].totalPts) + '</span>';
+    trueBody.appendChild(row);
+  });
+
+  // ── schedule strength
+  var schedBody = document.getElementById('schedBody');
+  var schedSorted = rids.slice().sort(function(a, b) { return R.schedStrength[b] - R.schedStrength[a]; });
+  var maxSch = R.schedStrength[schedSorted[0]] || 1;
+  var minSch = R.schedStrength[schedSorted[schedSorted.length - 1]] || 0;
+  schedBody.innerHTML = '';
+  schedSorted.forEach(function(r, i) {
+    var str = R.schedStrength[r];
+    var isChamp = r === champ;
+    var hardness = str >= (maxSch * 0.85) ? 'hardest' : (str <= (minSch + (maxSch - minSch) * 0.15) ? 'easiest' : '');
+    var hardCls = hardness === 'hardest' ? 'luck-neg' : (hardness === 'easiest' ? 'luck-pos' : 'luck-neu');
+    var barPct = maxSch > minSch ? Math.round(((str - minSch) / (maxSch - minSch)) * 100) : 50;
+    var row = document.createElement('div');
+    row.className = 'trow' + (isChamp ? ' is-champ' : '');
+    row.style.gridTemplateColumns = '28px 1fr auto 80px';
+    row.innerHTML =
+      '<span class="trow-rank">' + (i + 1) + '</span>' +
+      '<div>' +
+        '<div class="trow-name">' + esc(teams[r].name) + (isChamp ? ' <i class="ti ti-crown" style="color:var(--gold);font-size:11px;margin-left:4px"></i>' : '') + '</div>' +
+        '<div class="trow-bar-wrap"><div class="trow-bar" style="width:' + barPct + '%;background:var(--red)"></div></div>' +
+      '</div>' +
+      (hardness ? '<span class="luck-badge ' + hardCls + '" style="margin-right:12px;align-self:center">' + hardness + '</span>' : '<span style="margin-right:12px"></span>') +
+      '<span class="trow-pct" style="color:var(--t2)">' + str.toFixed(1) + '</span>';
+    schedBody.appendChild(row);
+  });
+}
+
+function makeStatCard(label, name, val, color) {
+  return '<div class="stat-card" style="border-color:' + color + '33">' +
+    '<div class="stat-card-label">' + label + '</div>' +
+    '<div class="stat-card-name" style="color:' + color + '">' + esc(name) + '</div>' +
+    '<div class="stat-card-val">' + val + '</div>' +
+  '</div>';
+}
+
+// ─── helpers ────────────────────────────────────────────────────────────────
+var var_gold = '#ffb300', var_green = '#22c55e', var_red = '#ef4444', var_blue = '#3b82f6';
+
+function pct(v) { return Math.round(v * 100) + '%'; }
+function pts(v) { return v ? v.toFixed(1) : '0.0'; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+
+async function apiFetch(path) {
+  var res = await fetch('https://api.sleeper.app' + path);
+  if (!res.ok) throw new Error('API error: ' + path);
+  return res.json();
+}
+
+function setStatus(msg, pctVal) {
+  document.getElementById('runStatus').textContent = msg;
+  setProgress(pctVal);
+}
+function setProgress(pctVal) {
+  document.getElementById('progressFill').style.width = pctVal + '%';
+}
+
+// enter on connect
+document.getElementById('iUser').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doConnect();
+});
+</script>
+</body>
+</html>
